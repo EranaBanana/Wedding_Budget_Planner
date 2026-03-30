@@ -1054,23 +1054,7 @@ body.is-printing .panel { display:block!important; }
   </div>
 
   <!-- Mobile tap-to-assign UI -->
-  <div class="mobile-seating-ui" id="mobile-seating-ui">
-    <div class="mobile-seating-hint" id="mobile-seating-hint">Tap a guest to select them, then tap a table to assign.</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div>
-        <div class="seating-sidebar-title" style="margin-bottom:10px">Unassigned Guests</div>
-        <div id="mobile-unassigned-list" style="display:flex;flex-direction:column;gap:6px"></div>
-      </div>
-      <div>
-        <div class="seating-sidebar-title" style="margin-bottom:10px">Tables</div>
-        <div id="mobile-tables-list" style="display:flex;flex-direction:column;gap:8px"></div>
-      </div>
-    </div>
-    <div style="margin-top:20px">
-      <div class="seating-sidebar-title" style="margin-bottom:10px">Assigned Guests</div>
-      <div id="mobile-assigned-list" style="display:flex;flex-direction:column;gap:8px"></div>
-    </div>
-  </div>
+  <div class="mobile-seating-ui" id="mobile-seating-ui"></div>
 </section>
 
 <!-- ── WEDDING PARTY ── -->
@@ -2254,93 +2238,124 @@ function seatGuest(tableId,guestId){
   if(!state.seatingAssignments[tableId])state.seatingAssignments[tableId]=[];
   if(state.seatingAssignments[tableId].length>=tbl.capacity){showToast('Table is at capacity');return;}
   if(!state.seatingAssignments[tableId].includes(guestId))state.seatingAssignments[tableId].push(guestId);
-  buildSeating();saveData();
+  buildSeating();buildMobileSeating();saveData();
 }
-function unseatGuest(tableId,guestId){state.seatingAssignments[tableId]=(state.seatingAssignments[tableId]||[]).filter(id=>id!==guestId);buildSeating();saveData();}
+function unseatGuest(tableId,guestId){state.seatingAssignments[tableId]=(state.seatingAssignments[tableId]||[]).filter(id=>id!==guestId);buildSeating();buildMobileSeating();saveData();}
 function renameTable(id,val){const t=state.seatingTables.find(t=>t.id===id);if(t){t.name=val;saveData();}}
-function removeTable(id){if(!confirm('Remove this table?'))return;state.seatingTables=state.seatingTables.filter(t=>t.id!==id);delete state.seatingAssignments[id];DSM.recordChange();buildSeating();saveData();}
-function changeCapacity(id,delta){const t=state.seatingTables.find(t=>t.id===id);if(t){t.capacity=Math.max(1,t.capacity+delta);buildSeating();saveData();}}
-function clearSeatingAssignments(){if(!confirm('Reset all seating assignments?'))return;state.seatingAssignments={};buildSeating();saveData();}
+function removeTable(id){if(!confirm('Remove this table?'))return;state.seatingTables=state.seatingTables.filter(t=>t.id!==id);delete state.seatingAssignments[id];DSM.recordChange();buildSeating();buildMobileSeating();saveData();}
+function changeCapacity(id,delta){const t=state.seatingTables.find(t=>t.id===id);if(t){t.capacity=Math.max(1,t.capacity+delta);buildSeating();buildMobileSeating();saveData();}}
+function clearSeatingAssignments(){if(!confirm('Reset all seating assignments?'))return;state.seatingAssignments={};buildSeating();buildMobileSeating();saveData();}
 function updateSeating(){const panel=document.getElementById('panel-seating');if(panel&&panel.classList.contains('active')){buildSeating();buildMobileSeating();}}
 
 let mobileSelectedGuestId=null;
 function buildMobileSeating(){
-  const unEl=document.getElementById('mobile-unassigned-list');
-  const tabEl=document.getElementById('mobile-tables-list');
-  const assignedEl=document.getElementById('mobile-assigned-list');
-  const hint=document.getElementById('mobile-seating-hint');
-  if(!unEl||!tabEl||!assignedEl)return;
+  const root=document.getElementById('mobile-seating-ui');
+  if(!root)return;
+  root.innerHTML='';
 
   const assignedIds=Object.values(state.seatingAssignments).flat();
   const unassigned=state.guests.filter(g=>!assignedIds.includes(g.id));
 
-  // Hint text
-  if(hint){
-    if(mobileSelectedGuestId){
-      const g=state.guests.find(g=>g.id===mobileSelectedGuestId);
-      hint.textContent=g?`"${g.name}" selected — tap a table to assign them. Tap guest again to deselect.`:'Tap a guest to select, then tap a table.';
-      hint.style.borderLeftColor='var(--blush-deep)';
-      hint.style.background='rgba(232,160,176,.2)';
-    } else {
-      hint.textContent='Tap a guest to select them, then tap a table to assign.';
-      hint.style.borderLeftColor='var(--blush-dark)';
-      hint.style.background='rgba(242,196,206,.15)';
-    }
+  // ── Hint banner ──
+  const hint=document.createElement('div');
+  hint.className='mobile-seating-hint';
+  if(mobileSelectedGuestId){
+    const sel=state.guests.find(g=>g.id===mobileSelectedGuestId);
+    hint.textContent=sel
+      ? `"${sel.name}" selected — tap a table below to assign. Tap their name again to deselect.`
+      : 'Tap a guest to select, then tap a table.';
+    hint.style.cssText='font-size:.82rem;color:var(--brown);font-style:italic;margin-bottom:16px;padding:10px 14px;background:rgba(232,160,176,.2);border-radius:var(--radius-sm);border-left:3px solid var(--blush-deep)';
+  } else {
+    hint.textContent='Tap a guest to select, then tap a table to assign them.';
+    hint.style.cssText='font-size:.82rem;color:var(--brown-soft);font-style:italic;margin-bottom:16px;padding:10px 14px;background:rgba(242,196,206,.12);border-radius:var(--radius-sm);border-left:3px solid var(--blush-dark)';
   }
+  root.appendChild(hint);
 
-  // Unassigned guests
-  unEl.innerHTML='';
+  // ── Unassigned guests ──
+  const unTitle=document.createElement('div');
+  unTitle.style.cssText='font-family:var(--font-display);font-size:1rem;font-style:italic;color:var(--brown);margin-bottom:8px';
+  unTitle.textContent='Unassigned Guests';
+  root.appendChild(unTitle);
+
+  const unGrid=document.createElement('div');
+  unGrid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px';
   if(!unassigned.length){
-    unEl.innerHTML='<div style="font-size:.8rem;color:var(--sage-dark);font-style:italic;padding:8px">All guests assigned ✓</div>';
+    unGrid.style.gridTemplateColumns='1fr';
+    unGrid.innerHTML='<div style="font-size:.82rem;color:var(--sage-dark);font-style:italic;padding:8px 0">All guests assigned ✓</div>';
+  } else {
+    unassigned.forEach(g=>{
+      const chip=document.createElement('div');
+      chip.className='mobile-guest-chip'+(mobileSelectedGuestId===g.id?' selected':'');
+      chip.innerHTML=`<span style="font-weight:500;font-size:.85rem">${esc(g.name)}</span><span style="font-size:.7rem;color:var(--brown-soft)">${esc(g.type)}</span>`;
+      chip.onclick=()=>{
+        mobileSelectedGuestId=(mobileSelectedGuestId===g.id)?null:g.id;
+        buildMobileSeating();
+      };
+      unGrid.appendChild(chip);
+    });
   }
-  unassigned.forEach(g=>{
-    const chip=document.createElement('div');
-    chip.className='mobile-guest-chip'+(mobileSelectedGuestId===g.id?' selected':'');
-    chip.innerHTML=`<span>${esc(g.name)}</span><span style="font-size:.7rem;color:var(--brown-soft)">${esc(g.type)}</span>`;
-    chip.onclick=()=>{
-      mobileSelectedGuestId=(mobileSelectedGuestId===g.id)?null:g.id;
-      buildMobileSeating();
-    };
-    unEl.appendChild(chip);
-  });
+  root.appendChild(unGrid);
 
-  // Tables
-  tabEl.innerHTML='';
+  // ── Tables ──
+  const tblTitle=document.createElement('div');
+  tblTitle.style.cssText='font-family:var(--font-display);font-size:1rem;font-style:italic;color:var(--brown);margin-bottom:8px';
+  tblTitle.textContent='Tables';
+  root.appendChild(tblTitle);
+
   if(!state.seatingTables.length){
-    tabEl.innerHTML='<div style="font-size:.8rem;color:var(--brown-soft);font-style:italic;padding:8px">No tables yet — click Add Table above.</div>';
+    const empty=document.createElement('div');
+    empty.style.cssText='font-size:.82rem;color:var(--brown-soft);font-style:italic;padding:8px 0;margin-bottom:24px';
+    empty.textContent='No tables yet — tap "Add Table" above.';
+    root.appendChild(empty);
   }
-  state.seatingTables.forEach(tbl=>{
-    const seated=state.seatingAssignments[tbl.id]||[];
-    const btn=document.createElement('div');
-    btn.className='mobile-table-btn';
-    btn.innerHTML=`<div class="tbl-name">${esc(tbl.name)}</div><div class="tbl-count">${seated.length}/${tbl.capacity} seated</div>`;
-    btn.onclick=()=>{
-      if(!mobileSelectedGuestId)return;
-      if(seated.length>=tbl.capacity){showToast('Table is at capacity');return;}
-      seatGuest(tbl.id,mobileSelectedGuestId);
-      mobileSelectedGuestId=null;
-      buildMobileSeating();
-    };
-    tabEl.appendChild(btn);
-  });
 
-  // Assigned guests by table
-  assignedEl.innerHTML='';
   state.seatingTables.forEach(tbl=>{
     const seated=(state.seatingAssignments[tbl.id]||[]).map(id=>state.guests.find(g=>g.id===id)).filter(Boolean);
-    if(!seated.length)return;
-    const block=document.createElement('div');
-    block.style.cssText='background:var(--white);border-radius:var(--radius-sm);padding:12px 16px;border:1px solid var(--grey-light);box-shadow:var(--shadow-soft)';
-    block.innerHTML=`<div style="font-family:var(--font-display);font-size:.95rem;font-style:italic;color:var(--brown);margin-bottom:8px">${esc(tbl.name)} <span style="font-size:.75rem;color:var(--brown-soft);font-style:normal">(${seated.length}/${tbl.capacity})</span></div>`+
-      seated.map(g=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--grey-light)">
-        <span style="font-size:.85rem">${esc(g.name)}</span>
-        <button style="border:none;background:none;color:var(--brown-soft);cursor:pointer;font-size:.8rem;padding:2px 6px" onclick="unseatGuest(${tbl.id},${g.id});buildMobileSeating()">✕</button>
-      </div>`).join('');
-    assignedEl.appendChild(block);
+    const full=seated.length>=tbl.capacity;
+
+    const card=document.createElement('div');
+    card.style.cssText='background:var(--white);border-radius:var(--radius);padding:14px 16px;border:2px solid var(--grey-mid);box-shadow:var(--shadow-soft);margin-bottom:12px;transition:border-color .2s';
+    if(mobileSelectedGuestId && !full) card.style.borderColor='var(--blush-dark)';
+    if(full) card.style.opacity='.7';
+
+    // Table header — tap to assign selected guest
+    const header=document.createElement('div');
+    header.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:'+(mobileSelectedGuestId&&!full?'pointer':'default');
+    header.innerHTML=`<div>
+        <div style="font-family:var(--font-display);font-size:1rem;font-style:italic;color:var(--brown)">${esc(tbl.name)}</div>
+        <div style="font-size:.72rem;color:var(--brown-soft);margin-top:1px">${seated.length}/${tbl.capacity} seated${full?' · Full':''}${mobileSelectedGuestId&&!full?' · Tap to assign':''}</div>
+      </div>
+      <div style="display:flex;gap:4px">
+        <button style="border:1px solid var(--grey-mid);background:transparent;border-radius:4px;padding:3px 8px;cursor:pointer;font-size:.75rem;color:var(--brown-soft)" onclick="event.stopPropagation();changeCapacity(${tbl.id},-1)">−</button>
+        <button style="border:1px solid var(--grey-mid);background:transparent;border-radius:4px;padding:3px 8px;cursor:pointer;font-size:.75rem;color:var(--brown-soft)" onclick="event.stopPropagation();changeCapacity(${tbl.id},+1)">+</button>
+        <button style="border:1px solid var(--grey-mid);background:transparent;border-radius:4px;padding:3px 8px;cursor:pointer;font-size:.75rem;color:var(--brown-soft)" onclick="event.stopPropagation();if(confirm('Remove table?')){removeTable(${tbl.id})}">✕</button>
+      </div>`;
+    if(mobileSelectedGuestId && !full){
+      header.onclick=()=>{
+        seatGuest(tbl.id,mobileSelectedGuestId);
+        mobileSelectedGuestId=null;
+      };
+    }
+    card.appendChild(header);
+
+    // Seated guests list
+    if(seated.length){
+      seated.forEach(g=>{
+        const row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px solid var(--grey-light)';
+        row.innerHTML=`<span style="font-size:.85rem;color:var(--brown)">${esc(g.name)}</span>
+          <button style="border:none;background:var(--grey-light);border-radius:4px;padding:3px 8px;cursor:pointer;font-size:.75rem;color:var(--brown-soft)" onclick="unseatGuest(${tbl.id},${g.id})">Remove</button>`;
+        card.appendChild(row);
+      });
+    } else {
+      const empty=document.createElement('div');
+      empty.style.cssText='font-size:.78rem;color:var(--brown-soft);font-style:italic;border-top:1px solid var(--grey-light);padding-top:8px';
+      empty.textContent='No guests assigned yet';
+      card.appendChild(empty);
+    }
+
+    root.appendChild(card);
   });
-  if(!assignedEl.children.length){
-    assignedEl.innerHTML='<div style="font-size:.8rem;color:var(--brown-soft);font-style:italic;padding:8px">No guests assigned yet.</div>';
-  }
 }
 function dropOnCanvas(e){e.preventDefault();}
 
