@@ -2189,7 +2189,7 @@ function addSeatingTable(){
   state.seatingTables.push({id,name:`Table ${state.seatingTables.length+1}`,capacity:8,x:20+state.seatingTables.length*20%200,y:20+Math.floor(state.seatingTables.length/5)*160});
   DSM.recordChange();
   if(!state.seatingAssignments[id]) state.seatingAssignments[id]=[];
-  buildSeating();saveData();
+  buildSeating();buildMobileSeating();saveData();
 }
 function buildSeating(){
   const unEl=document.getElementById('unassigned-list');const tabCont=document.getElementById('seating-tables-container');
