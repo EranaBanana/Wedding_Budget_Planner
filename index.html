@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════════╗
   ║         WEDDING BUDGET PLANNER — by Erana Banana                ║
@@ -468,12 +468,46 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
   .couple-field input{width:110px}
   .seating-workspace{flex-direction:column}
   .seating-sidebar{width:100%}
+  /* Guest table mobile */
+  .guest-table-header,.guest-item{grid-template-columns:2fr 1fr 1.5fr 36px}
+  .guest-table-header span:nth-child(4),.guest-item>*:nth-child(4){display:none}
+  /* Gift table mobile */
+  .gift-header,.gift-item{grid-template-columns:1.5fr 1fr .8fr 36px}
+  .gift-header span:nth-child(2),.gift-item>*:nth-child(2),
+  .gift-header span:nth-child(4),.gift-item>*:nth-child(4){display:none}
+  /* Music table mobile */
+  .music-header,.music-item{grid-template-columns:1.5fr 2fr 36px}
+  .music-header span:nth-child(3),.music-item>*:nth-child(3),
+  .music-header span:nth-child(4),.music-item>*:nth-child(4){display:none}
+  /* Itinerary mobile */
+  .itinerary-list::before{left:68px}
+  .itinerary-item{grid-template-columns:56px 18px 1fr auto}
+  .itinerary-time{font-size:.82rem}
+  /* Form grids stack on mobile */
+  .form-grid{grid-template-columns:1fr!important}
+  .budget-input-wrap input{width:130px}
 }
 @media(max-width:540px){
   .summary-cards{grid-template-columns:1fr 1fr}
-  .form-grid{grid-template-columns:1fr}
   .vendor-grid{grid-template-columns:1fr}
   .howto-grid{grid-template-columns:1fr}
+  .nav-tab{padding:8px 10px;font-size:.68rem}
+  .nav-tab .tab-icon{font-size:.8rem}
+}
+
+/* ── MOBILE SEATING ── */
+.mobile-seating-ui{display:none}
+.mobile-guest-chip{background:var(--white);border:2px solid var(--grey-mid);border-radius:var(--radius-sm);padding:10px 14px;font-size:.88rem;color:var(--brown);cursor:pointer;transition:var(--transition);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mobile-guest-chip.selected{border-color:var(--blush-dark);background:rgba(232,160,176,.12)}
+.mobile-guest-chip:active{transform:scale(.97)}
+.mobile-table-btn{background:var(--white);border:1.5px solid var(--grey-mid);border-radius:var(--radius);padding:12px 16px;cursor:pointer;transition:var(--transition);text-align:left;width:100%}
+.mobile-table-btn:hover,.mobile-table-btn:active{border-color:var(--blush-dark);background:rgba(232,160,176,.08)}
+.mobile-table-btn .tbl-name{font-family:var(--font-display);font-size:1rem;font-style:italic;color:var(--brown)}
+.mobile-table-btn .tbl-count{font-size:.75rem;color:var(--brown-soft);margin-top:2px}
+.mobile-seating-hint{font-size:.78rem;color:var(--brown-soft);font-style:italic;margin-bottom:12px;padding:8px 12px;background:rgba(242,196,206,.15);border-radius:var(--radius-sm);border-left:3px solid var(--blush-dark)}
+@media(max-width:768px){
+  .desktop-seating-ui{display:none!important}
+  .mobile-seating-ui{display:block}
 }
 
 /* ── CURRENCY + STYLE BAR ── */
@@ -1001,12 +1035,14 @@ body.is-printing .panel { display:block!important; }
 <section id="panel-seating" class="panel">
   <div class="section-eyebrow">Floor Plan</div>
   <h2 class="section-title">Seating <em>Plan</em></h2>
-  <p class="section-desc">Drag guests from the unassigned list onto tables. Add tables, rename them, set capacities, and arrange the floor plan visually.</p>
+  <p class="section-desc">Assign guests to tables. On desktop, drag guests onto tables. On mobile, tap a guest then tap a table to assign them.</p>
   <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
     <button class="btn-add" onclick="addSeatingTable()"><span>+</span> Add Table</button>
     <button class="btn-modal-cancel" onclick="clearSeatingAssignments()">Reset Assignments</button>
   </div>
-  <div class="seating-workspace">
+
+  <!-- Desktop drag-and-drop UI -->
+  <div class="seating-workspace desktop-seating-ui">
     <div class="seating-sidebar">
       <div class="seating-sidebar-title">Unassigned Guests</div>
       <div class="unassigned-list" id="unassigned-list"></div>
@@ -1014,6 +1050,25 @@ body.is-printing .panel { display:block!important; }
     <div class="seating-canvas" id="seating-canvas" ondragover="event.preventDefault()" ondrop="dropOnCanvas(event)">
       <div id="seating-tables-container"></div>
       <div style="position:absolute;bottom:12px;right:12px;font-size:.7rem;color:var(--brown-soft);opacity:.6;font-style:italic">Drag guests to assign · drag tables to reposition</div>
+    </div>
+  </div>
+
+  <!-- Mobile tap-to-assign UI -->
+  <div class="mobile-seating-ui" id="mobile-seating-ui">
+    <div class="mobile-seating-hint" id="mobile-seating-hint">Tap a guest to select them, then tap a table to assign.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <div class="seating-sidebar-title" style="margin-bottom:10px">Unassigned Guests</div>
+        <div id="mobile-unassigned-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+      <div>
+        <div class="seating-sidebar-title" style="margin-bottom:10px">Tables</div>
+        <div id="mobile-tables-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </div>
+    <div style="margin-top:20px">
+      <div class="seating-sidebar-title" style="margin-bottom:10px">Assigned Guests</div>
+      <div id="mobile-assigned-list" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
   </div>
 </section>
@@ -1794,7 +1849,7 @@ function showToast(msg='All changes saved ✓'){
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
 }
-function showPanel(id){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));document.getElementById('panel-'+id).classList.add('active');event.currentTarget.classList.add('active');updateAll();if(id==='seating')buildSeating();}
+function showPanel(id){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));document.getElementById('panel-'+id).classList.add('active');event.currentTarget.classList.add('active');updateAll();if(id==='seating'){buildSeating();buildMobileSeating();}}
 function fmt(n){if(isNaN(n)||n===null||n===undefined)n=0;return(CUR||'$')+Math.abs(Math.round(n)).toLocaleString();}
 function fmtPct(n){return(isNaN(n)?0:n).toFixed(1)+'%';}
 function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
@@ -2206,7 +2261,87 @@ function renameTable(id,val){const t=state.seatingTables.find(t=>t.id===id);if(t
 function removeTable(id){if(!confirm('Remove this table?'))return;state.seatingTables=state.seatingTables.filter(t=>t.id!==id);delete state.seatingAssignments[id];DSM.recordChange();buildSeating();saveData();}
 function changeCapacity(id,delta){const t=state.seatingTables.find(t=>t.id===id);if(t){t.capacity=Math.max(1,t.capacity+delta);buildSeating();saveData();}}
 function clearSeatingAssignments(){if(!confirm('Reset all seating assignments?'))return;state.seatingAssignments={};buildSeating();saveData();}
-function updateSeating(){const panel=document.getElementById('panel-seating');if(panel&&panel.classList.contains('active'))buildSeating();}
+function updateSeating(){const panel=document.getElementById('panel-seating');if(panel&&panel.classList.contains('active')){buildSeating();buildMobileSeating();}}
+
+let mobileSelectedGuestId=null;
+function buildMobileSeating(){
+  const unEl=document.getElementById('mobile-unassigned-list');
+  const tabEl=document.getElementById('mobile-tables-list');
+  const assignedEl=document.getElementById('mobile-assigned-list');
+  const hint=document.getElementById('mobile-seating-hint');
+  if(!unEl||!tabEl||!assignedEl)return;
+
+  const assignedIds=Object.values(state.seatingAssignments).flat();
+  const unassigned=state.guests.filter(g=>!assignedIds.includes(g.id));
+
+  // Hint text
+  if(hint){
+    if(mobileSelectedGuestId){
+      const g=state.guests.find(g=>g.id===mobileSelectedGuestId);
+      hint.textContent=g?`"${g.name}" selected — tap a table to assign them. Tap guest again to deselect.`:'Tap a guest to select, then tap a table.';
+      hint.style.borderLeftColor='var(--blush-deep)';
+      hint.style.background='rgba(232,160,176,.2)';
+    } else {
+      hint.textContent='Tap a guest to select them, then tap a table to assign.';
+      hint.style.borderLeftColor='var(--blush-dark)';
+      hint.style.background='rgba(242,196,206,.15)';
+    }
+  }
+
+  // Unassigned guests
+  unEl.innerHTML='';
+  if(!unassigned.length){
+    unEl.innerHTML='<div style="font-size:.8rem;color:var(--sage-dark);font-style:italic;padding:8px">All guests assigned ✓</div>';
+  }
+  unassigned.forEach(g=>{
+    const chip=document.createElement('div');
+    chip.className='mobile-guest-chip'+(mobileSelectedGuestId===g.id?' selected':'');
+    chip.innerHTML=`<span>${esc(g.name)}</span><span style="font-size:.7rem;color:var(--brown-soft)">${esc(g.type)}</span>`;
+    chip.onclick=()=>{
+      mobileSelectedGuestId=(mobileSelectedGuestId===g.id)?null:g.id;
+      buildMobileSeating();
+    };
+    unEl.appendChild(chip);
+  });
+
+  // Tables
+  tabEl.innerHTML='';
+  if(!state.seatingTables.length){
+    tabEl.innerHTML='<div style="font-size:.8rem;color:var(--brown-soft);font-style:italic;padding:8px">No tables yet — click Add Table above.</div>';
+  }
+  state.seatingTables.forEach(tbl=>{
+    const seated=state.seatingAssignments[tbl.id]||[];
+    const btn=document.createElement('div');
+    btn.className='mobile-table-btn';
+    btn.innerHTML=`<div class="tbl-name">${esc(tbl.name)}</div><div class="tbl-count">${seated.length}/${tbl.capacity} seated</div>`;
+    btn.onclick=()=>{
+      if(!mobileSelectedGuestId)return;
+      if(seated.length>=tbl.capacity){showToast('Table is at capacity');return;}
+      seatGuest(tbl.id,mobileSelectedGuestId);
+      mobileSelectedGuestId=null;
+      buildMobileSeating();
+    };
+    tabEl.appendChild(btn);
+  });
+
+  // Assigned guests by table
+  assignedEl.innerHTML='';
+  state.seatingTables.forEach(tbl=>{
+    const seated=(state.seatingAssignments[tbl.id]||[]).map(id=>state.guests.find(g=>g.id===id)).filter(Boolean);
+    if(!seated.length)return;
+    const block=document.createElement('div');
+    block.style.cssText='background:var(--white);border-radius:var(--radius-sm);padding:12px 16px;border:1px solid var(--grey-light);box-shadow:var(--shadow-soft)';
+    block.innerHTML=`<div style="font-family:var(--font-display);font-size:.95rem;font-style:italic;color:var(--brown);margin-bottom:8px">${esc(tbl.name)} <span style="font-size:.75rem;color:var(--brown-soft);font-style:normal">(${seated.length}/${tbl.capacity})</span></div>`+
+      seated.map(g=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--grey-light)">
+        <span style="font-size:.85rem">${esc(g.name)}</span>
+        <button style="border:none;background:none;color:var(--brown-soft);cursor:pointer;font-size:.8rem;padding:2px 6px" onclick="unseatGuest(${tbl.id},${g.id});buildMobileSeating()">✕</button>
+      </div>`).join('');
+    assignedEl.appendChild(block);
+  });
+  if(!assignedEl.children.length){
+    assignedEl.innerHTML='<div style="font-size:.8rem;color:var(--brown-soft);font-style:italic;padding:8px">No guests assigned yet.</div>';
+  }
+}
 function dropOnCanvas(e){e.preventDefault();}
 
 // ════════════════════════════════════════════════════════════════════
